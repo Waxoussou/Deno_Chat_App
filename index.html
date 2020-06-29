@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DenoChat</title>
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            box-sizing: content-box;
+        }
+
+        #App {
+            margin: auto 15px;
+            min-height: 100vh;
+        }
+
+        .chatForm {
+            position: sticky;
+            bottom: 10px;
+            display: flex;
+            justify-content: space-evenly;
+        }
+
+        .chatForm input {
+            width: 100%;
+            height: 2rem;
+        }
+
+        .chatForm button {
+            width: 100px;
+        }
+
+        #message-box {
+            min-height: 90vh
+        }
+
+        .message {
+            padding: 5px;
+        }
+
+        .message span {
+            color: rgb(58, 58, 58);
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="App"></div>
+    <script type='module'>
+        'use strict';
+
+        import {
+            html,
+            render,
+            useEffect,
+            useState,
+        } from 'https://unpkg.com/htm/preact/standalone.module.js'
+
+        let ws;
+
+        function Chat() {
+            const [messages, setMessage] = useState([])
+            const onReceiveMessage = ({ data }) => setMessage((m) => [...m, data])
+
+            const onSendMessage = (e) => {
+                const msg = e.target[0].value
+                e.preventDefault();
+                ws.send(msg);
+                e.target[0].value = '';
+            }
+            useEffect(() => {
+                if (ws) ws.close();
+                ws = new WebSocket(`ws://${window.location.host}/ws`)
+                ws.onopen = (e) => { console.log('Socket connection', window.location.host) }
+                ws.addEventListener('message', onReceiveMessage)
+
+                return () => {
+                    ws.removeEventListener('message', onReceiveMessage)
+                }
+            }, [])
+
+            return html`
+            <h1>DENO CHAT</h1>
+            <div id='message-box'>
+            ${messages.map((message) => {
+                let data = JSON.parse(message)
+                return html`<div class='message'>${data.senderId && html`<span>${data.senderId}:</span>`}${data.message}</div> `
+            })}
+            </div>
+            <form class='chatForm' onSubmit=${onSendMessage}>
+                <input type="text" />
+                <button>Send</button>
+              </form>
+
+            `
+        }
+
+        render(html`<${Chat} />`, document.getElementById('App'))
+
+    </script>
+</body>
+
+</html>
